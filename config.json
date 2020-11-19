@@ -1,7 +1,7 @@
 [{
 "config":{
 	"comment":"Fight length is in whole seconds only",
-	"fight length":"60",
+	"fight length":"180",
 	"number of runs":"100",
 	"major mana pot":"true",
 	"demonic rune":"true"
@@ -9,7 +9,8 @@
 
 "spec":{
 	"critfromtalents":"5",
-	"hitfromtalents":"3"
+	"hitfromtalents":"3",
+	"clearcasting":"true"
 	},
 
 "gear":{
