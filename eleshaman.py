@@ -70,10 +70,20 @@ if config['buffs']['flask'].lower()=='true':
 elif config['buffs']['flask'].lower()!='false':
     errors=True
 	
+if config['config']['chain lightning']=='true':
+	chainlightning=True
+elif config['config']['chain lightning'].lower() !='false':
+	errors=True
+else:
+	chainlightning=False
+	
+	
 if config['spec']['clearcasting'].lower() =='true':
 	clearcasting=True
 elif config['spec']['clearcasting'].lower() !='false':
 	errors=True
+else:
+	clearcasting=False
 
 
 if errors:
@@ -115,6 +125,7 @@ print("Estimated DPS: " +str(estimateddps))
 
 print("\nBeginning Simulation with the following parameters:")
 
+#init run:
 mana=manapool
 time=0
 totaldamage=0
@@ -125,6 +136,9 @@ misses=0
 lbcost=int(int(constants['r10lbcost']) - (int(constants['r10lbcost'])*int(constants['convectionpercent'])/100))
 lbmin=int(constants['r10lbmindmg'])
 lbmax=int(constants['r10lbmaxdmg'])
+clcost=int(int(constants['r4clcost']) - (int(constants['r4clcost'])*int(constants['convectionpercent'])/100))
+clmin=int(constants['r4clmindmg'])
+clmax=int(constants['r4clmaxdmg'])
 critmultiplier=float(constants['critmultiplier'])
 fightlength=int(config['config']['fight length'])
 numberofruns=int(config['config']['number of runs'])
@@ -138,13 +152,53 @@ spirittick=0
 spiritpertick=15+(int(int(config['gear']['spirit'])/5))
 clearcastingproc=False
 ccprocs=0
-
+clcooldown=0
 
 print("Fight Length: " +str(fightlength))
 
 while(time<fightlength):
+	#Cast chain lightning if it's being used and off cooldown and enough mana:
+	if chainlightning and clcooldown<=0 and mana>=clcost:
+		print("\nChain Lightning")
+		casts+=1
+		damage=0
+		if clearcastingproc:
+			print('Clearcasting proc')
+			clearcastingproc=False
+		else:
+			mana-=clcost
+		time+=1.5
+		manapotcooldown-=1.5
+		runecooldown-=1.5
+		mp5tick+=1.5
+		fivesecondrule=True
+		clcooldown=6
+		missroll=random.randint(1,100)		
+		if missroll>hit:
+			print('RESIST\nDamage 0')
+			misses+=1
+		else:
+			#calculate damage
+			damage=spellpower+random.randint(clmin,clmax)
+			#check for crit
+			critroll=random.randint(1,100)
+			if critroll<=crit:
+				print('CRIT')
+				damage=damage*critmultiplier
+				crits+=1
+			else:
+				print('Hit')
+				hits+=1
+			print('Damage ' +str(damage))
+			totaldamage+=damage
+		#check for clearcasting procs
+		if clearcasting:
+			proc=random.randint(1,10)
+			if proc==1:
+				clearcastingproc=True
+				ccprocs+=1
 	#Cast lightning bolt if enough mana:
-	if mana>=lbcost:
+	elif mana>=lbcost:
 		print("\nLightning Bolt")
 		casts+=1
 		damage=0
@@ -156,10 +210,11 @@ while(time<fightlength):
 		time+=2
 		manapotcooldown-=2
 		runecooldown-=2
+		clcooldown-=2
 		mp5tick+=2
-		#check for miss:
-		missroll=random.randint(1,100)
 		fivesecondrule=True
+		#check for miss:
+		missroll=random.randint(1,100)		
 		if missroll>hit:
 			print('RESIST\nDamage 0')
 			misses+=1
@@ -180,7 +235,6 @@ while(time<fightlength):
 		#check for clearcasting procs	
 		if clearcasting:
 			proc=random.randint(1,10)
-			print(proc)
 			if proc==1:
 				clearcastingproc=True
 				ccprocs+=1
@@ -191,6 +245,7 @@ while(time<fightlength):
 		time+=5
 		manapotcooldown-=5
 		runecooldown-=5
+		clcooldown-=5
 		mp5tick+=5
 		timespentoom+=5
 		#if we're not casting then we can have a spirit tick(unless this is the first 5 seconds since we last cast a spell)
@@ -224,6 +279,7 @@ while(time<fightlength):
 		mp5tick-=5
 		
 print('\n***Final report***')
+print("Fight Length: " +str(fightlength))
 print('Casts: ' +str(casts))
 print('Hits: ' +str(hits))
 print('Crits: ' +str(crits))
@@ -231,5 +287,5 @@ print('Misses: ' +str(misses))
 print('Clearcasting procs: ' +str(ccprocs))
 print('Total damage: ' +str(totaldamage))
 print('DPS: ' +str(totaldamage/time))
-print('Time spent OOM: ' +str(timespentoom))
+print('Time spent OOM: ' +str(timespentoom) +'s')
     
