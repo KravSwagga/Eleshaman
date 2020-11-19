@@ -21,6 +21,7 @@ print("Spell Hit From Talents: " +config['spec']['hitfromtalents'])
 print("Spell Hit From Items: " +config['gear']['hitfromitems'])
 print("Mana per 5 seconds: " +config['gear']['mp5'])
 print("Spirit: " +config['gear']['spirit'])
+print("Clearcasting: " +config['spec']['clearcasting'])
 print("Arcane Brilliance Buff used: " +config['buffs']['arcanebrilliance'])
 print("Gift Of The Wild Buff used: " +config['buffs']['giftofthewild'])
 print("Brilliant Wizard Oil used: " +config['buffs']['brilliantwizardoil'])
@@ -68,14 +69,21 @@ if config['buffs']['flask'].lower()=='true':
     spellpower+=int(constants['flaskofsupremepower'])
 elif config['buffs']['flask'].lower()!='false':
     errors=True
-
-manapool=1240+(intellect*15)
+	
+if config['spec']['clearcasting'].lower() =='true':
+	clearcasting=True
+elif config['spec']['clearcasting'].lower() !='false':
+	errors=True
 
 
 if errors:
     raise Exception('\nBinary values in config.json must be "true" or "false"')
 
+
+
 #Calculated dps:
+manapool=1240+(intellect*15)
+
 nakedlb= ((int(constants['r10lbmindmg']) +int(constants['r10lbmaxdmg']))/2) * (1 +(int(constants['concussionpercent'])/100))
 nakeddps=nakedlb/int(constants['lbcasttime'])
 hadps=nakeddps*hit/100
@@ -128,6 +136,9 @@ timespentoom=0
 fivesecondrule=True
 spirittick=0
 spiritpertick=15+(int(int(config['gear']['spirit'])/5))
+clearcastingproc=False
+ccprocs=0
+
 
 print("Fight Length: " +str(fightlength))
 
@@ -137,7 +148,11 @@ while(time<fightlength):
 		print("\nLightning Bolt")
 		casts+=1
 		damage=0
-		mana-=lbcost
+		if clearcastingproc:
+			print('Clearcasting proc')
+			clearcastingproc=False
+		else:
+			mana-=lbcost
 		time+=2
 		manapotcooldown-=2
 		runecooldown-=2
@@ -162,6 +177,13 @@ while(time<fightlength):
 				hits+=1
 			print('Damage ' +str(damage))
 			totaldamage+=damage
+		#check for clearcasting procs	
+		if clearcasting:
+			proc=random.randint(1,10)
+			print(proc)
+			if proc==1:
+				clearcastingproc=True
+				ccprocs+=1
 	else:
 	#If not enough mana, progress time by 5 seconds then try again
 	#ToDo: include spirit mana restore here
@@ -206,6 +228,7 @@ print('Casts: ' +str(casts))
 print('Hits: ' +str(hits))
 print('Crits: ' +str(crits))
 print('Misses: ' +str(misses))
+print('Clearcasting procs: ' +str(ccprocs))
 print('Total damage: ' +str(totaldamage))
 print('DPS: ' +str(totaldamage/time))
 print('Time spent OOM: ' +str(timespentoom))
