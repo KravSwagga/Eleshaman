@@ -5,10 +5,10 @@ import random
 
 #Load constants
 with open('constants.json') as json_file:
-    constants = json.load(json_file)[0]
+    constants = json.load(json_file)
     
 with open('config.json') as json_file:
-    config = json.load(json_file)[0]
+    config = json.load(json_file)
 
 print(config)
 
@@ -19,6 +19,8 @@ print("Spell Crit From Items: " +config['gear']['critfromitems'])
 print("Base Intellect: " +config['gear']['baseintellect'])
 print("Spell Hit From Talents: " +config['spec']['hitfromtalents'])
 print("Spell Hit From Items: " +config['gear']['hitfromitems'])
+print("Mana per 5 seconds: " +config['gear']['mp5'])
+print("Spirit: " +config['gear']['spirit'])
 print("Arcane Brilliance Buff used: " +config['buffs']['arcanebrilliance'])
 print("Gift Of The Wild Buff used: " +config['buffs']['giftofthewild'])
 print("Brilliant Wizard Oil used: " +config['buffs']['brilliantwizardoil'])
@@ -123,6 +125,9 @@ runecooldown=0
 mp5=int(config['gear']['mp5'])
 mp5tick=0
 timespentoom=0
+fivesecondrule=True
+spirittick=0
+spiritpertick=15+(int(int(config['gear']['spirit'])/5))
 
 print("Fight Length: " +str(fightlength))
 
@@ -139,6 +144,7 @@ while(time<fightlength):
 		mp5tick+=2
 		#check for miss:
 		missroll=random.randint(1,100)
+		fivesecondrule=True
 		if missroll>hit:
 			print('RESIST\nDamage 0')
 			misses+=1
@@ -159,12 +165,22 @@ while(time<fightlength):
 	else:
 	#If not enough mana, progress time by 5 seconds then try again
 	#ToDo: include spirit mana restore here
-		print('OOM')
+		print('\nOOM')
 		time+=5
 		manapotcooldown-=5
 		runecooldown-=5
 		mp5tick+=5
 		timespentoom+=5
+		#if we're not casting then we can have a spirit tick(unless this is the first 5 seconds since we last cast a spell)
+		if fivesecondrule is True:
+			fivesecondrule=False
+		else:
+			#Spirit ticks every 2 seconds
+			spirittick+=5
+			while spirittick>=2:
+				print('spirittick+=' +str(spiritpertick))
+				mana+=spirittick
+				spirittick-=2
 		
 	#Use mana pot and/or demonic rune if it's off cooldown and enough mana is spent
 	if manapotcooldown<=0 and manapool-mana>2250:

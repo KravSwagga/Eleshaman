@@ -1,4 +1,4 @@
-[{
+{
 "config":{
 	"comment":"Fight length is in whole seconds only",
 	"fight length":"180",
@@ -18,7 +18,8 @@
 	"baseintellect":"257",
 	"critfromitems":"7",
 	"hitfromitems":"2",
-	"mp5":"12"
+	"mp5":"12",
+	"spirit":"110"
 	},
 
 "buffs":{
@@ -28,4 +29,4 @@
 	"greaterarcaneelixir":"true",
 	"flask":"true"
 	}
-}]
+}
