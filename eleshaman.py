@@ -10,59 +10,61 @@ with open('constants.json') as json_file:
 with open('config.json') as json_file:
     config = json.load(json_file)[0]
 
+print(config)
+
 print("\nConfig:")
-print("Base Spell Power: " +config['basespellpower'])
-print("Spell Crit From Talents: " +config['critfromtalents'])
-print("Spell Crit From Items: " +config['critfromitems'])
-print("Base Intellect: " +config['baseintellect'])
-print("Spell Hit From Talents: " +config['hitfromtalents'])
-print("Spell Hit From Items: " +config['hitfromitems'])
-print("Arcane Brilliance Buff used: " +config['arcanebrilliance'])
-print("Gift Of The Wild Buff used: " +config['giftofthewild'])
-print("Brilliant Wizard Oil used: " +config['brilliantwizardoil'])
-print("Greater Arcane Elixir used: " +config['greaterarcaneelixir'])
-print("Flask of Supreme Power used: " +config['flask'])
+print("Base Spell Power: " +config['gear']['basespellpower'])
+print("Spell Crit From Talents: " +config['spec']['critfromtalents'])
+print("Spell Crit From Items: " +config['gear']['critfromitems'])
+print("Base Intellect: " +config['gear']['baseintellect'])
+print("Spell Hit From Talents: " +config['spec']['hitfromtalents'])
+print("Spell Hit From Items: " +config['gear']['hitfromitems'])
+print("Arcane Brilliance Buff used: " +config['buffs']['arcanebrilliance'])
+print("Gift Of The Wild Buff used: " +config['buffs']['giftofthewild'])
+print("Brilliant Wizard Oil used: " +config['buffs']['brilliantwizardoil'])
+print("Greater Arcane Elixir used: " +config['buffs']['greaterarcaneelixir'])
+print("Flask of Supreme Power used: " +config['buffs']['flask'])
 
 #Assume config.json values are valid and update if not
 errors=False
 
 #Calculated char stats:
 #intellect=baseintellect+arcanebrillianceint+giftofthewildint
-intellect=int(config['baseintellect'])
-if config['arcanebrilliance'].lower()=='true':
+intellect=int(config['gear']['baseintellect'])
+if config['buffs']['arcanebrilliance'].lower()=='true':
     intellect+=int(constants['arcanebrillianceint'])
-elif config['arcanebrilliance'].lower()!='false':
+elif config['buffs']['arcanebrilliance'].lower()!='false':
     errors=True
     
-if config['giftofthewild'].lower()=='true':
+if config['buffs']['giftofthewild'].lower()=='true':
     intellect+=int(constants['giftofthewildint'])
-elif config['giftofthewild'].lower()!='false':
+elif config['buffs']['giftofthewild'].lower()!='false':
     errors=True
     
 
 critfromint=intellect/float(constants['intpercrit'])
-crit=critfromint +float(config['critfromtalents']) +float(config['critfromitems'])
-hit=int(constants['basehitpercent']) +int(config['hitfromtalents']) +int(config['hitfromitems'])
+crit=critfromint +float(config['spec']['critfromtalents']) +float(config['gear']['critfromitems'])
+hit=int(constants['basehitpercent']) +int(config['spec']['hitfromtalents']) +int(config['gear']['hitfromitems'])
 
 #hit cap innit
 if hit > 99:
     hit=99
 
-spellpower=int(config['basespellpower']) 
-if config['brilliantwizardoil'].lower()=='true':
+spellpower=int(config['gear']['basespellpower']) 
+if config['buffs']['brilliantwizardoil'].lower()=='true':
     spellpower+=int(constants['brilliantwizardoilpower'])
     crit+=float(constants['brilliantwizardoilcrit'])
-elif config['brilliantwizardoil'].lower()!='false':
+elif config['buffs']['brilliantwizardoil'].lower()!='false':
     errors=True
 
-if config['greaterarcaneelixir'].lower()=='true':
+if config['buffs']['greaterarcaneelixir'].lower()=='true':
     spellpower+=int(constants['GAEPower'])
-elif config['greaterarcaneelixir'].lower()!='false':
+elif config['buffs']['greaterarcaneelixir'].lower()!='false':
     errors=True
     
-if config['flask'].lower()=='true':
+if config['buffs']['flask'].lower()=='true':
     spellpower+=int(constants['flaskofsupremepower'])
-elif config['flask'].lower()!='false':
+elif config['buffs']['flask'].lower()!='false':
     errors=True
 
 manapool=1240+(intellect*15)
