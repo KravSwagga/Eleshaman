@@ -1,4 +1,12 @@
 [{
+"config":{
+	"comment":"Fight length is in whole seconds only",
+	"fight length":"60",
+	"number of runs":"100",
+	"major mana pot":"true",
+	"demonic rune":"true"
+	},
+
 "spec":{
 	"critfromtalents":"5",
 	"hitfromtalents":"3"
@@ -8,7 +16,8 @@
 	"basespellpower":"564",
 	"baseintellect":"257",
 	"critfromitems":"7",
-	"hitfromitems":"2"
+	"hitfromitems":"2",
+	"mp5":"12"
 	},
 
 "buffs":{

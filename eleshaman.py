@@ -108,6 +108,7 @@ print("\nBeginning Simulation")
 mana=manapool
 time=0
 totaldamage=0
+casts=0
 hits=0
 crits=0
 misses=0
@@ -115,35 +116,65 @@ lbcost=int(int(constants['r10lbcost']) - (int(constants['r10lbcost'])*int(consta
 lbmin=int(constants['r10lbmindmg'])
 lbmax=int(constants['r10lbmaxdmg'])
 critmultiplier=float(constants['critmultiplier'])
+fightlength=int(config['config']['fight length'])
+numberofruns=int(config['config']['number of runs'])
+manapotcooldown=0
+runecooldown=0
+mp5=int(config['gear']['mp5'])
+mp5tick=0
 
 while(mana>=lbcost):
-    print("Lightning Bolt")
-    damage=0
-    mana-=lbcost
-    time+=2
-    #check for miss:
-    missroll=random.randint(1,100)
-    if missroll>hit:
-        print('RESIST\nDamage 0')
-        misses+=1
-    else:
-        #calculate damage
-        damage=spellpower+random.randint(lbmin,lbmax)
-        #check for crit
-        critroll=random.randint(1,100)
-        print(critroll)
-        if critroll<=crit:
-            print('CRIT')
-            damage=damage*critmultiplier
-            crits+=1
-        else:
-            print('Hit')
-            hits+=1
-        print('Damage ' +str(damage))
-        totaldamage+=damage
+	print("\nLightning Bolt")
+	casts+=1
+	damage=0
+	mana-=lbcost
+	time+=2
+	manapotcooldown-=2
+	runecooldown-=2
+	mp5tick+=2
+	#check for miss:
+	missroll=random.randint(1,100)
+	if missroll>hit:
+		print('RESIST\nDamage 0')
+		misses+=1
+	else:
+		#calculate damage
+		damage=spellpower+random.randint(lbmin,lbmax)
+		#check for crit
+		critroll=random.randint(1,100)
+		if critroll<=crit:
+			print('CRIT')
+			damage=damage*critmultiplier
+			crits+=1
+		else:
+			print('Hit')
+			hits+=1
+		print('Damage ' +str(damage))
+		totaldamage+=damage
+		
+	#Use mana pot and/or demonic rune if it's off cooldown and enough mana is spent, else progress cooldown timer
+	if manapotcooldown<=0 and manapool-mana>=2250:
+		pot=random.randint(1350,2250)
+		print('Major Mana Potion used, restored ' +str(pot) +' mana')
+		mana+=pot
+		manapotcooldown=120
+		
+	if runecooldown<=0 and manapool-mana>=1500:
+		rune=random.randint(900,1500)
+		print('Rune used, restored ' +str(rune) +' mana')
+		mana+=rune
+		runecooldown=120
+		
+	#add mp5 mana if ticked
+	if mp5tick>=5:
+		print('mp5tick' +str(mp5tick))
+		mana+=mp5
+		mp5tick-=5
+		
 
 print('OOM!')
-print('\nTime to OOM: ' +str(time))
+print('\nTime to OOM: ' +str(time) +'s')
+print('Casts: ' +str(casts))
 print('Hits: ' +str(hits))
 print('Crits: ' +str(crits))
 print('Misses: ' +str(misses))
