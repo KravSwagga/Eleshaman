@@ -3,6 +3,29 @@ print("Elemental Shaman simulator v0.1 beta")
 import json
 import random
 
+#ToDo:
+#Each cast type needs cleaning up to prevent duplication
+
+
+def cast_spell(dmgmin, dmgmax, spellpower, hit, crit, critmultiplier):
+	damage=0;
+	missroll=random.randint(1,100)
+	#assume miss and change if otherwise
+	hittype='MISS'
+	if missroll<hit:
+		#calculate damage
+		damage=spellpower+random.randint(dmgmin,dmgmax)
+		print(str(spellpower) +'+(' +str(dmgmin) +'-' +str(dmgmax) +')')
+		#check for crit
+		critroll=random.randint(1,100)
+		if critroll<=crit:
+			damage=damage*critmultiplier
+			hittype='CRIT'
+		else:
+			hittype='Hit'
+	return hittype,damage;
+	
+
 #Load constants
 with open('constants.json') as json_file:
     constants = json.load(json_file)
@@ -118,7 +141,7 @@ print("\nDPS Stats:")
 print("Naked dps without hit or crit: " +str(nakeddps))
 print("Hit adjusted dps: " +str(hadps))
 print("Spell power adjusted average lightning bolt damage: " +str(spalb))
-print("Spell power adjusted, hit adjusted dps: " +str(haspadps))
+print("Spell power adjusted, hit adjusted lightning boltdps: " +str(haspadps))
 
 print("Bonus dps from crits: " +str(dpsfromcrits))
 print("Estimated DPS: " +str(estimateddps))
@@ -133,9 +156,12 @@ casts=0
 hits=0
 crits=0
 misses=0
-lbcost=int(int(constants['r10lbcost']) - (int(constants['r10lbcost'])*int(constants['convectionpercent'])/100))
-lbmin=int(constants['r10lbmindmg'])
-lbmax=int(constants['r10lbmaxdmg'])
+r10lbcost=int(int(constants['r10lbcost']) - (int(constants['r10lbcost'])*int(constants['convectionpercent'])/100))
+r10lbmin=int(constants['r10lbmindmg'])
+r10lbmax=int(constants['r10lbmaxdmg'])
+r4lbcost=int(int(constants['r4lbcost']) - (int(constants['r4lbcost'])*int(constants['convectionpercent'])/100))
+r4lbmin=int(constants['r4lbmindmg'])
+r4lbmax=int(constants['r4lbmaxdmg'])
 clcost=int(int(constants['r4clcost']) - (int(constants['r4clcost'])*int(constants['convectionpercent'])/100))
 clmin=int(constants['r4clmindmg'])
 clmax=int(constants['r4clmaxdmg'])
@@ -153,15 +179,48 @@ spiritpertick=15+(int(int(config['gear']['spirit'])/5))
 clearcastingproc=False
 ccprocs=0
 clcooldown=0
+downrank=int(config['config']['downrank percent'])
+lbpower=int(spellpower*float(constants['lbcoefficient']))
+clpower=int(spellpower*float(constants['clcoefficient']))
 
 print("Fight Length: " +str(fightlength))
 
 while(time<fightlength):
-	#Cast chain lightning if it's being used and off cooldown and enough mana:
-	if chainlightning and clcooldown<=0 and mana>=clcost:
+	#Downrank if mana is below threshold and we have enough mana
+	if mana/manapool*100<=downrank and mana>=r4lbcost:
+		print("\nLightning Bolt R4")
+		casts+=1
+		if clearcastingproc:
+			print('Clearcasting proc')
+			clearcastingproc=False
+		else:
+			mana-=r4lbcost
+		time+=2
+		manapotcooldown-=2
+		runecooldown-=2
+		clcooldown-=2
+		mp5tick+=2
+		fivesecondrule=True
+		hittype,damage= cast_spell(r4lbmin, r4lbmax, lbpower, hit, crit, critmultiplier)
+		print(hittype)
+		print('Damage ' + str(damage))
+		totaldamage+=damage
+		if hittype=='Hit':
+			hits+=1
+		elif hittype=='CRIT':
+			crits+=1
+		elif hittype=='MISS':
+			misses+=1
+		#generate clearcasting procs
+		if clearcasting:
+			proc=random.randint(1,10)
+			if proc==1:
+				clearcastingproc=True
+				ccprocs+=1
+	#Cast chain lightning if it's being used and off cooldown and enough mana and we're not downranking:
+	elif chainlightning and clcooldown<=0 and mana>=clcost:
 		print("\nChain Lightning")
 		casts+=1
-		damage=0
 		if clearcastingproc:
 			print('Clearcasting proc')
 			clearcastingproc=False
@@ -173,40 +232,32 @@ while(time<fightlength):
 		mp5tick+=1.5
 		fivesecondrule=True
 		clcooldown=6
-		missroll=random.randint(1,100)		
-		if missroll>hit:
-			print('RESIST\nDamage 0')
+		
+		hittype,damage= cast_spell(clmin, clmax, clpower, hit, crit, critmultiplier)
+		print(hittype)
+		print('Damage ' + str(damage))
+		totaldamage+=damage
+		if hittype=='Hit':
+			hits+=1
+		elif hittype=='CRIT':
+			crits+=1
+		elif hittype=='MISS':
 			misses+=1
-		else:
-			#calculate damage
-			damage=spellpower+random.randint(clmin,clmax)
-			#check for crit
-			critroll=random.randint(1,100)
-			if critroll<=crit:
-				print('CRIT')
-				damage=damage*critmultiplier
-				crits+=1
-			else:
-				print('Hit')
-				hits+=1
-			print('Damage ' +str(damage))
-			totaldamage+=damage
-		#check for clearcasting procs
+		#generate clearcasting procs
 		if clearcasting:
 			proc=random.randint(1,10)
 			if proc==1:
 				clearcastingproc=True
 				ccprocs+=1
-	#Cast lightning bolt if enough mana:
-	elif mana>=lbcost:
-		print("\nLightning Bolt")
+	#Normal lightning bolt:
+	elif mana>=r10lbcost:
+		print("\nLightning Bolt R10")
 		casts+=1
-		damage=0
 		if clearcastingproc:
 			print('Clearcasting proc')
 			clearcastingproc=False
 		else:
-			mana-=lbcost
+			mana-=r10lbcost
 		time+=2
 		manapotcooldown-=2
 		runecooldown-=2
@@ -214,24 +265,16 @@ while(time<fightlength):
 		mp5tick+=2
 		fivesecondrule=True
 		#check for miss:
-		missroll=random.randint(1,100)		
-		if missroll>hit:
-			print('RESIST\nDamage 0')
+		hittype,damage= cast_spell(r10lbmin, r10lbmax, lbpower, hit, crit, critmultiplier)
+		print(hittype)
+		print('Damage ' + str(damage))
+		totaldamage+=damage
+		if hittype=='Hit':
+			hits+=1
+		elif hittype=='CRIT':
+			crits+=1
+		elif hittype=='MISS':
 			misses+=1
-		else:
-			#calculate damage
-			damage=spellpower+random.randint(lbmin,lbmax)
-			#check for crit
-			critroll=random.randint(1,100)
-			if critroll<=crit:
-				print('CRIT')
-				damage=damage*critmultiplier
-				crits+=1
-			else:
-				print('Hit')
-				hits+=1
-			print('Damage ' +str(damage))
-			totaldamage+=damage
 		#check for clearcasting procs	
 		if clearcasting:
 			proc=random.randint(1,10)

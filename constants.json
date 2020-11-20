@@ -6,6 +6,7 @@
 "critmultiplier":"2",
 "convectionpercent":"10",
 "lbcoefficient":"0.857",
+"clcoefficient":"0.714",
 "r10lbcost":"256",
 "r10lbmindmg":"428",
 "r10lbmaxdmg":"477",
