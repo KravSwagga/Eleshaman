@@ -2,12 +2,26 @@ print("Elemental Shaman simulator v0.1 beta")
 
 import json
 import random
+import statistics as stats
 
 #ToDo:
 #Each cast type needs cleaning up to prevent duplication
 
 
-def cast_spell(dmgmin, dmgmax, spellpower, hit, crit, critmultiplier):
+#define functions
+def stringtobool(string):
+	if string.lower()=='true':
+		return True
+	elif string.lower()!='false':
+		raise Exception('Boolean values in JSON must be "True" or "False"')
+	else:
+		return False
+
+def verbose_print(text,verbose=False):
+	if verbose:
+		print(text)
+
+def cast_spell(dmgmin, dmgmax, spellpower, hit, crit, critmultiplier, guaranteedcrit=False):
 	damage=0;
 	missroll=random.randint(1,100)
 	#assume miss and change if otherwise
@@ -15,7 +29,7 @@ def cast_spell(dmgmin, dmgmax, spellpower, hit, crit, critmultiplier):
 	if missroll<hit:
 		#calculate damage
 		damage=spellpower+random.randint(dmgmin,dmgmax)
-		print(str(spellpower) +'+(' +str(dmgmin) +'-' +str(dmgmax) +')')
+		#print(str(spellpower) +'+(' +str(dmgmin) +'-' +str(dmgmax) +')')
 		#check for crit
 		critroll=random.randint(1,100)
 		if critroll<=crit:
@@ -26,7 +40,9 @@ def cast_spell(dmgmin, dmgmax, spellpower, hit, crit, critmultiplier):
 	return hittype,damage;
 	
 
-#Load constants
+###BEGIN MAIN###
+
+#Load configs
 with open('constants.json') as json_file:
     constants = json.load(json_file)
     
@@ -50,22 +66,19 @@ print("Gift Of The Wild Buff used: " +config['buffs']['giftofthewild'])
 print("Brilliant Wizard Oil used: " +config['buffs']['brilliantwizardoil'])
 print("Greater Arcane Elixir used: " +config['buffs']['greaterarcaneelixir'])
 print("Flask of Supreme Power used: " +config['buffs']['flask'])
+print("Troll Berserking: " +config['spec']['troll berserking'])
 
-#Assume config.json values are valid and update if not
-errors=False
+
+
 
 #Calculated char stats:
 #intellect=baseintellect+arcanebrillianceint+giftofthewildint
 intellect=int(config['gear']['baseintellect'])
-if config['buffs']['arcanebrilliance'].lower()=='true':
+if stringtobool(config['buffs']['arcanebrilliance']):
     intellect+=int(constants['arcanebrillianceint'])
-elif config['buffs']['arcanebrilliance'].lower()!='false':
-    errors=True
     
-if config['buffs']['giftofthewild'].lower()=='true':
+if stringtobool(config['buffs']['giftofthewild']):
     intellect+=int(constants['giftofthewildint'])
-elif config['buffs']['giftofthewild'].lower()!='false':
-    errors=True
     
 
 critfromint=intellect/float(constants['intpercrit'])
@@ -77,40 +90,19 @@ if hit > 99:
     hit=99
 
 spellpower=int(config['gear']['basespellpower']) 
-if config['buffs']['brilliantwizardoil'].lower()=='true':
+if stringtobool(config['buffs']['brilliantwizardoil']):
     spellpower+=int(constants['brilliantwizardoilpower'])
     crit+=float(constants['brilliantwizardoilcrit'])
-elif config['buffs']['brilliantwizardoil'].lower()!='false':
-    errors=True
 
-if config['buffs']['greaterarcaneelixir'].lower()=='true':
+if stringtobool(config['buffs']['greaterarcaneelixir']):
     spellpower+=int(constants['GAEPower'])
-elif config['buffs']['greaterarcaneelixir'].lower()!='false':
-    errors=True
     
-if config['buffs']['flask'].lower()=='true':
+if stringtobool(config['buffs']['flask']):
     spellpower+=int(constants['flaskofsupremepower'])
-elif config['buffs']['flask'].lower()!='false':
-    errors=True
 	
-if config['config']['chain lightning']=='true':
-	chainlightning=True
-elif config['config']['chain lightning'].lower() !='false':
-	errors=True
-else:
-	chainlightning=False
-	
-	
-if config['spec']['clearcasting'].lower() =='true':
-	clearcasting=True
-elif config['spec']['clearcasting'].lower() !='false':
-	errors=True
-else:
-	clearcasting=False
-
-
-if errors:
-    raise Exception('\nBinary values in config.json must be "true" or "false"')
+chainlightning=stringtobool(config['config']['chain lightning'])
+clearcasting=stringtobool(config['spec']['clearcasting'])
+verbose= stringtobool(config['config']['verbose'])
 
 
 
@@ -149,13 +141,7 @@ print("Estimated DPS: " +str(estimateddps))
 print("\nBeginning Simulation with the following parameters:")
 
 #init run:
-mana=manapool
-time=0
-totaldamage=0
-casts=0
-hits=0
-crits=0
-misses=0
+
 r10lbcost=int(int(constants['r10lbcost']) - (int(constants['r10lbcost'])*int(constants['convectionpercent'])/100))
 r10lbmin=int(constants['r10lbmindmg'])
 r10lbmax=int(constants['r10lbmaxdmg'])
@@ -168,167 +154,205 @@ clmax=int(constants['r4clmaxdmg'])
 critmultiplier=float(constants['critmultiplier'])
 fightlength=int(config['config']['fight length'])
 numberofruns=int(config['config']['number of runs'])
-manapotcooldown=0
-runecooldown=0
 mp5=int(config['gear']['mp5'])
-mp5tick=0
-timespentoom=0
-fivesecondrule=True
-spirittick=0
 spiritpertick=15+(int(int(config['gear']['spirit'])/5))
-clearcastingproc=False
-ccprocs=0
-clcooldown=0
 downrank=int(config['config']['downrank percent'])
 lbpower=int(spellpower*float(constants['lbcoefficient']))
 clpower=int(spellpower*float(constants['clcoefficient']))
 
-print("Fight Length: " +str(fightlength))
 
-while(time<fightlength):
-	#Downrank if mana is below threshold and we have enough mana
-	if mana/manapool*100<=downrank and mana>=r4lbcost:
-		print("\nLightning Bolt R4")
-		casts+=1
-		if clearcastingproc:
-			print('Clearcasting proc')
-			clearcastingproc=False
-		else:
-			mana-=r4lbcost
-		time+=2
-		manapotcooldown-=2
-		runecooldown-=2
-		clcooldown-=2
-		mp5tick+=2
-		fivesecondrule=True
-		hittype,damage= cast_spell(r4lbmin, r4lbmax, lbpower, hit, crit, critmultiplier)
-		print(hittype)
-		print('Damage ' + str(damage))
-		totaldamage+=damage
-		if hittype=='Hit':
-			hits+=1
-		elif hittype=='CRIT':
-			crits+=1
-		elif hittype=='MISS':
-			misses+=1
-		#generate clearcasting procs
-		if clearcasting:
-			proc=random.randint(1,10)
-			if proc==1:
-				clearcastingproc=True
-				ccprocs+=1
-	#Cast chain lightning if it's being used and off cooldown and enough mana and we're not downranking:
-	elif chainlightning and clcooldown<=0 and mana>=clcost:
-		print("\nChain Lightning")
-		casts+=1
-		if clearcastingproc:
-			print('Clearcasting proc')
-			clearcastingproc=False
-		else:
-			mana-=clcost
-		time+=1.5
-		manapotcooldown-=1.5
-		runecooldown-=1.5
-		mp5tick+=1.5
-		fivesecondrule=True
-		clcooldown=6
-		
-		hittype,damage= cast_spell(clmin, clmax, clpower, hit, crit, critmultiplier)
-		print(hittype)
-		print('Damage ' + str(damage))
-		totaldamage+=damage
-		if hittype=='Hit':
-			hits+=1
-		elif hittype=='CRIT':
-			crits+=1
-		elif hittype=='MISS':
-			misses+=1
-		#generate clearcasting procs
-		if clearcasting:
-			proc=random.randint(1,10)
-			if proc==1:
-				clearcastingproc=True
-				ccprocs+=1
-	#Normal lightning bolt:
-	elif mana>=r10lbcost:
-		print("\nLightning Bolt R10")
-		casts+=1
-		if clearcastingproc:
-			print('Clearcasting proc')
-			clearcastingproc=False
-		else:
-			mana-=r10lbcost
-		time+=2
-		manapotcooldown-=2
-		runecooldown-=2
-		clcooldown-=2
-		mp5tick+=2
-		fivesecondrule=True
-		#check for miss:
-		hittype,damage= cast_spell(r10lbmin, r10lbmax, lbpower, hit, crit, critmultiplier)
-		print(hittype)
-		print('Damage ' + str(damage))
-		totaldamage+=damage
-		if hittype=='Hit':
-			hits+=1
-		elif hittype=='CRIT':
-			crits+=1
-		elif hittype=='MISS':
-			misses+=1
-		#check for clearcasting procs	
-		if clearcasting:
-			proc=random.randint(1,10)
-			if proc==1:
-				clearcastingproc=True
-				ccprocs+=1
-	else:
-	#If not enough mana, progress time by 5 seconds then try again
-	#ToDo: include spirit mana restore here
-		print('\nOOM')
-		time+=5
-		manapotcooldown-=5
-		runecooldown-=5
-		clcooldown-=5
-		mp5tick+=5
-		timespentoom+=5
-		#if we're not casting then we can have a spirit tick(unless this is the first 5 seconds since we last cast a spell)
-		if fivesecondrule is True:
-			fivesecondrule=False
-		else:
-			#Spirit ticks every 2 seconds
-			spirittick+=5
-			while spirittick>=2:
-				print('spirittick+=' +str(spiritpertick))
-				mana+=spirittick
-				spirittick-=2
-		
-	#Use mana pot and/or demonic rune if it's off cooldown and enough mana is spent
-	if manapotcooldown<=0 and manapool-mana>2250:
-		pot=random.randint(1350,2250)
-		print('Major Mana Potion used, restored ' +str(pot) +' mana')
-		mana+=pot
-		manapotcooldown=120
-		
-	if runecooldown<=0 and manapool-mana>1500:
-		rune=random.randint(900,1500)
-		print('Rune used, restored ' +str(rune) +' mana')
-		mana+=rune
-		runecooldown=120
-		
-	#add mp5 mana if ticked
-	if mp5tick>=5:
-		print('mp5tick')
-		mana+=mp5
-		mp5tick-=5
-		
-print('\n***Final report***')
 print("Fight Length: " +str(fightlength))
-print('Casts: ' +str(casts))
-print('Hits: ' +str(hits))
-print('Crits: ' +str(crits))
-print('Misses: ' +str(misses))
-print('Clearcasting procs: ' +str(ccprocs))
-print('Total damage: ' +str(totaldamage))
-print('DPS: ' +str(totaldamage/time))
-print('Time spent OOM: ' +str(timespentoom) +'s')
+print("Number of Runs(not implemented): " +str(numberofruns))
+print("Verbose: " +str(verbose))
+
+DPSes =[]
+for run in range(1,numberofruns+1):
+	mana=manapool
+	time=0
+	totaldamage=0
+	casts=0
+	hits=0
+	crits=0
+	misses=0
+	manapotcooldown=0
+	runecooldown=0
+	mp5tick=0
+	timespentoom=0
+	fivesecondrule=True
+	spirittick=0
+	clearcastingproc=False
+	ccprocs=0
+	clcooldown=0
+	while(time<fightlength):
+		#Action decision tree:
+		#1. Pop cooldowns if they are available
+		#2a. Cast R4 lightning bolt if we are in downranking state
+		#2.b. Cast chain lightning if it's available
+		#2.c. Cast R10 lightning bolt if it's available
+		#2.d. Wait 5 seconds if we are oom
+		#3. Pop mana pot or rune if we are low on mana
+		#4. Tick mp5 if appropriate
+		
+		#Pop cooldowns if they are available:
+		
+		
+		#Downrank if mana is below threshold and we have enough mana
+		if mana/manapool*100<=downrank and mana>=r4lbcost:
+			verbose_print("\nLightning Bolt R4", verbose)
+			casts+=1
+			if clearcastingproc:
+				verbose_print('Clearcasting proc', verbose)
+				clearcastingproc=False
+			else:
+				mana-=r4lbcost
+			time+=2
+			manapotcooldown-=2
+			runecooldown-=2
+			clcooldown-=2
+			mp5tick+=2
+			fivesecondrule=True
+			hittype,damage= cast_spell(r4lbmin, r4lbmax, lbpower, hit, crit, critmultiplier)
+			verbose_print(hittype, verbose)
+			verbose_print('Damage ' + str(damage), verbose)
+			totaldamage+=damage
+			if hittype=='Hit':
+				hits+=1
+			elif hittype=='CRIT':
+				crits+=1
+			elif hittype=='MISS':
+				misses+=1
+			#generate clearcasting procs
+			if clearcasting:
+				proc=random.randint(1,10)
+				if proc==1:
+					clearcastingproc=True
+					ccprocs+=1
+		#Cast chain lightning if it's being used and off cooldown and enough mana and we're not downranking:
+		elif chainlightning and clcooldown<=0 and mana>=clcost:
+			verbose_print("\nChain Lightning", verbose)
+			casts+=1
+			if clearcastingproc:
+				verbose_print('Clearcasting proc', verbose)
+				clearcastingproc=False
+			else:
+				mana-=clcost
+			time+=1.5
+			manapotcooldown-=1.5
+			runecooldown-=1.5
+			mp5tick+=1.5
+			fivesecondrule=True
+			clcooldown=6
+			
+			hittype,damage= cast_spell(clmin, clmax, clpower, hit, crit, critmultiplier)
+			verbose_print(hittype, verbose)
+			verbose_print('Damage ' + str(damage), verbose)
+			totaldamage+=damage
+			if hittype=='Hit':
+				hits+=1
+			elif hittype=='CRIT':
+				crits+=1
+			elif hittype=='MISS':
+				misses+=1
+			#generate clearcasting procs
+			if clearcasting:
+				proc=random.randint(1,10)
+				if proc==1:
+					clearcastingproc=True
+					ccprocs+=1
+		#Normal lightning bolt:
+		elif mana>=r10lbcost:
+			verbose_print("\nLightning Bolt R10", verbose)
+			casts+=1
+			if clearcastingproc:
+				verbose_print('Clearcasting proc', verbose)
+				clearcastingproc=False
+			else:
+				mana-=r10lbcost
+			time+=2
+			manapotcooldown-=2
+			runecooldown-=2
+			clcooldown-=2
+			mp5tick+=2
+			fivesecondrule=True
+			#check for miss:
+			hittype,damage= cast_spell(r10lbmin, r10lbmax, lbpower, hit, crit, critmultiplier)
+			verbose_print(hittype, verbose)
+			verbose_print('Damage ' + str(damage), verbose)
+			totaldamage+=damage
+			if hittype=='Hit':
+				hits+=1
+			elif hittype=='CRIT':
+				crits+=1
+			elif hittype=='MISS':
+				misses+=1
+			#check for clearcasting procs	
+			if clearcasting:
+				proc=random.randint(1,10)
+				if proc==1:
+					clearcastingproc=True
+					ccprocs+=1
+		else:
+		#If not enough mana, progress time by 5 seconds then try again
+		#ToDo: include spirit mana restore here
+			verbose_print('\nOOM', verbose)
+			time+=5
+			manapotcooldown-=5
+			runecooldown-=5
+			clcooldown-=5
+			mp5tick+=5
+			timespentoom+=5
+			#if we're not casting then we can have a spirit tick(unless this is the first 5 seconds since we last cast a spell)
+			if fivesecondrule is True:
+				fivesecondrule=False
+			else:
+				#Spirit ticks every 2 seconds
+				spirittick+=5
+				while spirittick>=2:
+					verbose_print('spirittick+=' +str(spiritpertick), verbose)
+					mana+=spirittick
+					spirittick-=2
+			
+		#Use mana pot and/or demonic rune if it's off cooldown and enough mana is spent
+		if manapotcooldown<=0 and manapool-mana>2250:
+			pot=random.randint(1350,2250)
+			verbose_print('Major Mana Potion used, restored ' +str(pot) +' mana', verbose)
+			mana+=pot
+			manapotcooldown=120
+			
+		if runecooldown<=0 and manapool-mana>1500:
+			rune=random.randint(900,1500)
+			verbose_print('Rune used, restored ' +str(rune) +' mana', verbose)
+			mana+=rune
+			runecooldown=120
+			
+		#add mp5 mana if ticked
+		if mp5tick>=5:
+			verbose_print('mp5tick', verbose)
+			mana+=mp5
+			mp5tick-=5
+			
+	print('\n***Report for run ' +str(run) + '***')
+	print("Fight Length: " +str(fightlength))
+	print('Casts: ' +str(casts))
+	print('Hits: ' +str(hits))
+	print('Crits: ' +str(crits))
+	print('Misses: ' +str(misses))
+	print('Clearcasting procs: ' +str(ccprocs))
+	print('Total damage: ' +str(totaldamage))
+	print('DPS: ' +str(int(totaldamage/time)))
+	DPSes.append(int(totaldamage/time))
+	print('Time spent OOM: ' +str(timespentoom) +'s')
     
+
+print('*****FINAL REPORT*****')
+print(DPSes)
+averagedps=int(sum(DPSes)/len(DPSes))
+mediandps=int(stats.median(DPSes))
+variance=int(stats.variance(DPSes))
+mindps=min(DPSes)
+maxdps=max(DPSes)
+print('Min DPS: ' +str(mindps))
+print('Max DPS: ' +str(maxdps))
+print('Average DPS: ' +str(averagedps))
+print('Median DPS: ' +str(mediandps))
+print('Variance: ' +str(variance))
