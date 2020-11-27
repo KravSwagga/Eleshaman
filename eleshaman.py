@@ -5,7 +5,9 @@ import random
 import statistics as stats
 
 #ToDo:
-#Each cast type needs cleaning up to prevent duplication
+#-Each cast type needs cleaning up to prevent duplication
+#-Berserking
+
 
 
 #define functions
@@ -102,8 +104,7 @@ if stringtobool(config['buffs']['flask']):
 chainlightning=stringtobool(config['config']['chain lightning'])
 clearcasting=stringtobool(config['spec']['clearcasting'])
 verbose= stringtobool(config['config']['verbose'])
-
-
+berserking=stringtobool(config['spec']['troll berserking'])
 
 #Calculated dps:
 manapool=1240+(intellect*15)
@@ -166,6 +167,7 @@ print("Verbose: " +str(verbose))
 
 DPSes =[]
 for run in range(1,numberofruns+1):
+	verbose_print('\n***Beginning run #' +str(run) +'***', verbose)
 	mana=manapool
 	time=0
 	totaldamage=0
@@ -182,6 +184,8 @@ for run in range(1,numberofruns+1):
 	clearcastingproc=False
 	ccprocs=0
 	clcooldown=0
+	berserkcooldown=180
+	berserkmultiplier=1
 	while(time<fightlength):
 		#Action decision tree:
 		#1. Pop cooldowns if they are available
@@ -193,6 +197,15 @@ for run in range(1,numberofruns+1):
 		#4. Tick mp5 if appropriate
 		
 		#Pop cooldowns if they are available:
+		#De/Activate berserking. Always assume full health.
+		if berserking and berserkcooldown>=180:
+			verbose_print('Berserking activated', verbose)
+			berserkcooldown=0
+			berserkmultiplier=0.9
+		elif berserking and berserkcooldown>=10 and berserkmultiplier==0.9:
+			verbose_print('Berserking ended', verbose)
+			berserkmultiplier=1
+		
 		
 		
 		#Downrank if mana is below threshold and we have enough mana
@@ -204,11 +217,12 @@ for run in range(1,numberofruns+1):
 				clearcastingproc=False
 			else:
 				mana-=r4lbcost
-			time+=2
-			manapotcooldown-=2
-			runecooldown-=2
-			clcooldown-=2
-			mp5tick+=2
+			time+=2*berserkmultiplier
+			manapotcooldown-=2*berserkmultiplier
+			runecooldown-=2*berserkmultiplier
+			clcooldown-=2*berserkmultiplier
+			mp5tick+=2*berserkmultiplier
+			berserkcooldown+=2*berserkmultiplier
 			fivesecondrule=True
 			hittype,damage= cast_spell(r4lbmin, r4lbmax, lbpower, hit, crit, critmultiplier)
 			verbose_print(hittype, verbose)
@@ -235,10 +249,11 @@ for run in range(1,numberofruns+1):
 				clearcastingproc=False
 			else:
 				mana-=clcost
-			time+=1.5
-			manapotcooldown-=1.5
-			runecooldown-=1.5
-			mp5tick+=1.5
+			time+=1.5*berserkmultiplier
+			manapotcooldown-=1.5*berserkmultiplier
+			runecooldown-=1.5*berserkmultiplier
+			mp5tick+=1.5*berserkmultiplier
+			berserkcooldown+=1.5*berserkmultiplier
 			fivesecondrule=True
 			clcooldown=6
 			
@@ -267,11 +282,12 @@ for run in range(1,numberofruns+1):
 				clearcastingproc=False
 			else:
 				mana-=r10lbcost
-			time+=2
-			manapotcooldown-=2
-			runecooldown-=2
-			clcooldown-=2
-			mp5tick+=2
+			time+=2*berserkmultiplier
+			manapotcooldown-=2*berserkmultiplier
+			runecooldown-=2*berserkmultiplier
+			clcooldown-=2*berserkmultiplier
+			mp5tick+=2*berserkmultiplier
+			berserkcooldown+=2*berserkmultiplier
 			fivesecondrule=True
 			#check for miss:
 			hittype,damage= cast_spell(r10lbmin, r10lbmax, lbpower, hit, crit, critmultiplier)
@@ -300,6 +316,7 @@ for run in range(1,numberofruns+1):
 			clcooldown-=5
 			mp5tick+=5
 			timespentoom+=5
+			berserkcooldown+=5
 			#if we're not casting then we can have a spirit tick(unless this is the first 5 seconds since we last cast a spell)
 			if fivesecondrule is True:
 				fivesecondrule=False
