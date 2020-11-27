@@ -49,7 +49,6 @@ with open('constants.json') as json_file:
 with open('config.json') as json_file:
     config = json.load(json_file)
 
-print(config)
 
 print("\nConfig:")
 print("Base Spell Power: " +config['gear']['basespellpower'])
@@ -162,7 +161,7 @@ clpower=int(spellpower*float(constants['clcoefficient']))
 
 
 print("Fight Length: " +str(fightlength))
-print("Number of Runs(not implemented): " +str(numberofruns))
+print("Number of Runs: " +str(numberofruns))
 print("Verbose: " +str(verbose))
 
 DPSes =[]
