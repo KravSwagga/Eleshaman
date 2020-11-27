@@ -6,7 +6,8 @@ import statistics as stats
 
 #ToDo:
 #-Each cast type needs cleaning up to prevent duplication
-#-Berserking
+#Elemental Mastery batch crits
+#Bug: cooldowns will pop even if we don't have enough mana to cast spells
 
 
 
@@ -34,7 +35,7 @@ def cast_spell(dmgmin, dmgmax, spellpower, hit, crit, critmultiplier, guaranteed
 		#print(str(spellpower) +'+(' +str(dmgmin) +'-' +str(dmgmax) +')')
 		#check for crit
 		critroll=random.randint(1,100)
-		if critroll<=crit:
+		if critroll<=crit or guaranteedcrit:
 			damage=damage*critmultiplier
 			hittype='CRIT'
 		else:
@@ -68,6 +69,7 @@ print("Brilliant Wizard Oil used: " +config['buffs']['brilliantwizardoil'])
 print("Greater Arcane Elixir used: " +config['buffs']['greaterarcaneelixir'])
 print("Flask of Supreme Power used: " +config['buffs']['flask'])
 print("Troll Berserking: " +config['spec']['troll berserking'])
+print("Elemental Master: " +config['spec']['elemental mastery'])
 
 
 
@@ -105,6 +107,7 @@ chainlightning=stringtobool(config['config']['chain lightning'])
 clearcasting=stringtobool(config['spec']['clearcasting'])
 verbose= stringtobool(config['config']['verbose'])
 berserking=stringtobool(config['spec']['troll berserking'])
+elementalmastery=stringtobool(config['spec']['elemental mastery'])
 
 #Calculated dps:
 manapool=1240+(intellect*15)
@@ -186,6 +189,8 @@ for run in range(1,numberofruns+1):
 	clcooldown=0
 	berserkcooldown=180
 	berserkmultiplier=1
+	emcooldown=180
+	guaranteedcrit=False
 	while(time<fightlength):
 		#Action decision tree:
 		#1. Pop cooldowns if they are available
@@ -197,6 +202,13 @@ for run in range(1,numberofruns+1):
 		#4. Tick mp5 if appropriate
 		
 		#Pop cooldowns if they are available:
+		
+		#Activate elemental mastery:
+		if elementalmastery and emcooldown>=180:
+			verbose_print('Elemental mastery activated', verbose)
+			guaranteedcrit=True
+			emcooldown=0
+		
 		#De/Activate berserking. Always assume full health.
 		if berserking and berserkcooldown>=180:
 			verbose_print('Berserking activated', verbose)
@@ -224,7 +236,12 @@ for run in range(1,numberofruns+1):
 			mp5tick+=2*berserkmultiplier
 			berserkcooldown+=2*berserkmultiplier
 			fivesecondrule=True
-			hittype,damage= cast_spell(r4lbmin, r4lbmax, lbpower, hit, crit, critmultiplier)
+			
+			#cast the spell:
+			hittype,damage= cast_spell(r4lbmin, r4lbmax, lbpower, hit, crit, critmultiplier, guaranteedcrit=guaranteedcrit)
+			#Consume EM if used:
+			guaranteedcrit=False
+			
 			verbose_print(hittype, verbose)
 			verbose_print('Damage ' + str(damage), verbose)
 			totaldamage+=damage
@@ -257,7 +274,10 @@ for run in range(1,numberofruns+1):
 			fivesecondrule=True
 			clcooldown=6
 			
-			hittype,damage= cast_spell(clmin, clmax, clpower, hit, crit, critmultiplier)
+			hittype,damage= cast_spell(clmin, clmax, clpower, hit, crit, critmultiplier, guaranteedcrit=guaranteedcrit)
+			#Consume EM if used:
+			guaranteedcrit=False
+			
 			verbose_print(hittype, verbose)
 			verbose_print('Damage ' + str(damage), verbose)
 			totaldamage+=damage
@@ -289,8 +309,11 @@ for run in range(1,numberofruns+1):
 			mp5tick+=2*berserkmultiplier
 			berserkcooldown+=2*berserkmultiplier
 			fivesecondrule=True
-			#check for miss:
-			hittype,damage= cast_spell(r10lbmin, r10lbmax, lbpower, hit, crit, critmultiplier)
+			
+			hittype,damage= cast_spell(r10lbmin, r10lbmax, lbpower, hit, crit, critmultiplier, guaranteedcrit=guaranteedcrit)
+			#Consume EM if used:
+			guaranteedcrit=False
+			
 			verbose_print(hittype, verbose)
 			verbose_print('Damage ' + str(damage), verbose)
 			totaldamage+=damage

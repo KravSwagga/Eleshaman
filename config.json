@@ -2,12 +2,12 @@
 "config":{
 	"comment":"Fight length is in whole seconds only",
 	"comment2": "Downrank percent is the percentage mana at which we switch to R4 LB. Use 0 to never downrank",
-	"fight length":"45",
+	"fight length":"10",
 	"number of runs":"2",
 	"verbose":"true",
 	"major mana pot":"true",
 	"demonic rune":"true",
-	"chain lightning":"true",
+	"chain lightning":"false",
 	"downrank percent":"10"
 	},
 
@@ -15,7 +15,8 @@
 	"critfromtalents":"5",
 	"hitfromtalents":"3",
 	"clearcasting":"true",
-	"troll berserking":"true"
+	"troll berserking":"true",
+	"elemental mastery":"true"
 	},
 
 "gear":{
